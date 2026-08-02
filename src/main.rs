@@ -1,4 +1,5 @@
 mod condenser;
+mod config;
 mod ui;
 
 use anyhow::Result;
@@ -9,6 +10,9 @@ use walkdir::WalkDir;
 fn main() -> Result<()> {
     inquire::set_global_render_config(ui::custom_render_config());
     ui::print_banner();
+
+    let cfg = config::Config::load()?;
+    ui::print_info(&format!("Output dir: {}", cfg.resolved_output_dir().display()));
 
     // STEP 1: Select video file
     ui::print_step(1, 3, "Select Raw Anime Video File");
@@ -53,13 +57,9 @@ fn main() -> Result<()> {
     let merged = condenser::merge_intervals(&raw_intervals, 0.3);
     ui::print_info(&format!("Merged into {} audio segments", merged.len()));
 
-    // Determine output path: ~/Music/immersionpod/current/<stem>.ogg
+    // Determine output path from config
     let stem = video_path.file_stem().unwrap().to_string_lossy();
-    let output_dir = dirs::audio_dir()
-        .unwrap_or_else(|| PathBuf::from("~/Music"))
-        .join("immersionpod")
-        .join("current");
-
+    let output_dir = cfg.resolved_output_dir();
     let output_path = output_dir.join(format!("{}.opus", stem));
 
     let condense_msg = format!(

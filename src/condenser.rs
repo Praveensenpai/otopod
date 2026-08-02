@@ -187,6 +187,48 @@ pub fn find_subtitle(video_path: &Path) -> Option<PathBuf> {
     None
 }
 
+/// Try to extract an embedded subtitle track from the video container using ffmpeg.
+/// Prioritizes Japanese subtitle tracks (`jpn` / `ja`), falling back to first subtitle track (`0:s:0`).
+pub fn extract_embedded_subtitle(video_path: &Path) -> Option<PathBuf> {
+    let tmp_dir = std::env::temp_dir();
+    let tmp_sub = tmp_dir.join(format!(
+        "otopod_embedded_{}.srt",
+        video_path.file_stem().unwrap_or_default().to_string_lossy()
+    ));
+
+    // Remove old temp sub if it exists
+    let _ = std::fs::remove_file(&tmp_sub);
+
+    // Try Japanese subtitle track first: jpn or ja, then fallback to first subtitle track 0:s:0
+    let maps = ["0:s:m:language:jpn", "0:s:m:language:ja", "0:s:0"];
+
+    for map in &maps {
+        let status = Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-i", &video_path.to_string_lossy(),
+                "-map", map,
+                "-c:s", "srt",
+                &tmp_sub.to_string_lossy(),
+            ])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status();
+
+        if let Ok(st) = status {
+            if st.success() && tmp_sub.exists() {
+                if let Ok(meta) = std::fs::metadata(&tmp_sub) {
+                    if meta.len() > 50 {
+                        return Some(tmp_sub);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Get the audio duration of a video file using ffprobe
 pub fn get_audio_duration(video_path: &Path) -> Option<f64> {
     let output = Command::new("ffprobe")

@@ -1,6 +1,6 @@
 [package]
 name = "otopod"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "音Pod — Blazing-fast single-pass anime audio condenser for Japanese passive immersion"
 authors = ["Praveensenpai"]

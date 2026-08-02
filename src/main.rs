@@ -27,32 +27,47 @@ fn main() -> Result<()> {
     let sub_path = match condenser::find_subtitle(&video_path) {
         Some(p) => {
             ui::print_success(&format!(
-                "Found subtitle: {}",
+                "Found external subtitle: {}",
                 p.file_name().unwrap().to_string_lossy()
             ));
             p
         }
         None => {
-            let stem = video_path.file_stem().unwrap().to_string_lossy();
-            let expected_sub = format!("{}.ja.srt", stem);
-            ui::print_warning("No external subtitle found alongside video.");
-            ui::print_info(&format!(
-                "Run `subsink` first to download and sync {} file.",
-                expected_sub
-            ));
+            let extract_spinner =
+                ui::create_spinner("Checking for embedded subtitle track in video container...");
+            let embedded = condenser::extract_embedded_subtitle(&video_path);
+            extract_spinner.finish_and_clear();
 
-            let options = vec![
-                "Exit to run subsink",
-                "Enter subtitle file path manually",
-            ];
-            let choice = Select::new("What would you like to do?", options).prompt()?;
+            match embedded {
+                Some(p) => {
+                    ui::print_success(
+                        "Found and extracted embedded subtitle stream from container!",
+                    );
+                    p
+                }
+                None => {
+                    let stem = video_path.file_stem().unwrap().to_string_lossy();
+                    let expected_sub = format!("{}.ja.srt", stem);
+                    ui::print_warning("No external or embedded subtitle found alongside video.");
+                    ui::print_info(&format!(
+                        "Run `subsink` first to download and sync {} file.",
+                        expected_sub
+                    ));
 
-            if choice.starts_with("Exit") {
-                println!();
-                return Ok(());
-            } else {
-                let custom = Text::new("Enter subtitle file path:").prompt()?;
-                PathBuf::from(custom)
+                    let options = vec![
+                        "Exit to run subsink",
+                        "Enter subtitle file path manually",
+                    ];
+                    let choice = Select::new("What would you like to do?", options).prompt()?;
+
+                    if choice.starts_with("Exit") {
+                        println!();
+                        return Ok(());
+                    } else {
+                        let custom = Text::new("Enter subtitle file path:").prompt()?;
+                        PathBuf::from(custom)
+                    }
+                }
             }
         }
     };

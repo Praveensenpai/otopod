@@ -44,7 +44,7 @@ fn main() -> Result<()> {
     ui::print_step(3, 3, "Condensing Audio (Single-Pass)");
 
     let parse_spinner = ui::create_spinner("Parsing subtitle timestamps...");
-    let raw_intervals = condenser::parse_srt(&sub_path)?;
+    let raw_intervals = condenser::parse_subtitle(&sub_path)?;
     parse_spinner.finish_and_clear();
     ui::print_success(&format!("Parsed {} subtitle lines", raw_intervals.len()));
 

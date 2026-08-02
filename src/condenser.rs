@@ -24,15 +24,29 @@ fn parse_srt_time(s: &str) -> Option<f64> {
     Some(h * 3600.0 + m * 60.0 + sec)
 }
 
-/// Parse all subtitle intervals from an SRT file
-pub fn parse_srt(srt_path: &Path) -> Result<Vec<SubtitleInterval>> {
-    let content = std::fs::read_to_string(srt_path)
-        .with_context(|| format!("Cannot read subtitle file: {}", srt_path.display()))?;
+/// Parse an ASS timestamp like "0:01:23.45" or "00:01:23.45" into seconds
+fn parse_ass_time(s: &str) -> Option<f64> {
+    let s = s.replace(',', ".");
+    let parts: Vec<&str> = s.split(':').collect();
+    if parts.len() != 3 {
+        return None;
+    }
+    let h: f64 = parts[0].parse().ok()?;
+    let m: f64 = parts[1].parse().ok()?;
+    let sec: f64 = parts[2].parse().ok()?;
+    Some(h * 3600.0 + m * 60.0 + sec)
+}
 
-    let re = Regex::new(r"(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})")?;
+/// Parse all subtitle intervals from an SRT or ASS file
+pub fn parse_subtitle(sub_path: &Path) -> Result<Vec<SubtitleInterval>> {
+    let content = std::fs::read_to_string(sub_path)
+        .with_context(|| format!("Cannot read subtitle file: {}", sub_path.display()))?;
 
     let mut intervals = Vec::new();
-    for cap in re.captures_iter(&content) {
+
+    // Check for SRT pattern: 00:01:23,456 --> 00:01:25,789
+    let re_srt = Regex::new(r"(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})")?;
+    for cap in re_srt.captures_iter(&content) {
         let start = parse_srt_time(&cap[1]);
         let end = parse_srt_time(&cap[2]);
         if let (Some(s), Some(e)) = (start, end) {
@@ -41,6 +55,23 @@ pub fn parse_srt(srt_path: &Path) -> Result<Vec<SubtitleInterval>> {
                     start_secs: s,
                     end_secs: e,
                 });
+            }
+        }
+    }
+
+    if intervals.is_empty() {
+        // Fallback/Try ASS pattern: Dialogue: 0,0:01:23.45,0:01:26.78,...
+        let re_ass = Regex::new(r"(?i)Dialogue:\s*\d+,\s*(\d{1,2}:\d{2}:\d{2}[\.\,]\d{2,3}),\s*(\d{1,2}:\d{2}:\d{2}[\.\,]\d{2,3})")?;
+        for cap in re_ass.captures_iter(&content) {
+            let start = parse_ass_time(&cap[1]);
+            let end = parse_ass_time(&cap[2]);
+            if let (Some(s), Some(e)) = (start, end) {
+                if e > s {
+                    intervals.push(SubtitleInterval {
+                        start_secs: s,
+                        end_secs: e,
+                    });
+                }
             }
         }
     }

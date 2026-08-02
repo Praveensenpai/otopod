@@ -113,13 +113,27 @@ pub fn merge_intervals(intervals: &[SubtitleInterval], padding: f64) -> Vec<Subt
     merged
 }
 
+fn build_expr_tree(items: &[String]) -> String {
+    if items.is_empty() {
+        return String::new();
+    }
+    if items.len() == 1 {
+        return items[0].clone();
+    }
+    let mid = items.len() / 2;
+    let left = build_expr_tree(&items[..mid]);
+    let right = build_expr_tree(&items[mid..]);
+    format!("({}+{})", left, right)
+}
+
 /// Build the ffmpeg `aselect` filter expression for all intervals
 fn build_select_filter(intervals: &[SubtitleInterval]) -> String {
     let parts: Vec<String> = intervals
         .iter()
         .map(|iv| format!("between(t,{:.3},{:.3})", iv.start_secs, iv.end_secs))
         .collect();
-    format!("aselect='{}',asetpts=N/SR/TB", parts.join("+"))
+    let expr = build_expr_tree(&parts);
+    format!("aselect='{}',asetpts=N/SR/TB", expr)
 }
 
 /// Run a single-pass ffmpeg audio condense directly to the output .ogg file.
@@ -137,7 +151,7 @@ pub fn condense_audio(
             .with_context(|| format!("Cannot create output directory: {}", parent.display()))?;
     }
 
-    let status = Command::new("ffmpeg")
+    let output = Command::new("ffmpeg")
         .args([
             "-y",                                          // overwrite existing
             "-i", &video_path.to_string_lossy(),           // input video
@@ -148,15 +162,15 @@ pub fn condense_audio(
             "-b:a", "64k",                                 // 64kbps opus ≈ 128kbps vorbis quality
             &output_path.to_string_lossy(),                // output file
         ])
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
+        .output()
         .context("Failed to spawn ffmpeg. Is ffmpeg installed and in PATH?")?;
 
-    if !status.success() {
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!(
-            "ffmpeg exited with non-zero status while condensing audio from: {}",
-            video_path.display()
+            "ffmpeg exited with non-zero status while condensing audio from: {}\nFFmpeg Error:\n{}",
+            video_path.display(),
+            stderr
         );
     }
 

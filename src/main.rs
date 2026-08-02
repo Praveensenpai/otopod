@@ -60,7 +60,7 @@ fn main() -> Result<()> {
         .join("immersionpod")
         .join("current");
 
-    let output_path = output_dir.join(format!("{}.ogg", stem));
+    let output_path = output_dir.join(format!("{}.opus", stem));
 
     let condense_msg = format!(
         "Condensing {} segments → {} ...",

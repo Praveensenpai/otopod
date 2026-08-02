@@ -112,8 +112,8 @@ pub fn condense_audio(
             "-i", &video_path.to_string_lossy(),           // input video
             "-af", &filter,                                // audio filter
             "-vn",                                         // no video
-            "-c:a", "libvorbis",                           // vorbis codec (.ogg)
-            "-q:a", "4",                                   // quality level 4
+            "-c:a", "libopus",                             // opus codec (.opus) — modern, smaller, better quality
+            "-b:a", "64k",                                 // 64kbps opus ≈ 128kbps vorbis quality
             &output_path.to_string_lossy(),                // output file
         ])
         .stdout(std::process::Stdio::null())

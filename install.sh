@@ -66,6 +66,9 @@ if [ ! -f "$BIN_DIR/otopod" ] || [ ! -s "$BIN_DIR/otopod" ]; then
 fi
 
 chmod +x "$BIN_DIR/otopod"
+if [ -d "$HOME/.cargo/bin" ]; then
+    cp "$BIN_DIR/otopod" "$HOME/.cargo/bin/otopod"
+fi
 echo -e "${GREEN}✔ Installed otopod ${INSTALLED_VER} to ${BIN_DIR}/otopod${NC}"
 
 # Shell alias setup

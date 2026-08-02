@@ -110,11 +110,37 @@ mpc update && mpc play
 
 ---
 
+## ⚙️ Configuration
+
+On first run, `otopod` automatically creates a config file at:
+```
+~/.config/otopod/config.toml
+```
+
+```toml
+# otopod configuration
+# Edit output_dir to change where condensed audio files are saved.
+
+output_dir = "/home/user/Music/immersionpod/current"
+```
+
+Edit `output_dir` to any folder you prefer — supports `~` for home directory:
+```toml
+output_dir = "~/Videos/condensed"
+```
+
+---
+
 ## 📁 Output
 
-Condensed audio is written to:
+Condensed audio is written to your configured `output_dir` as:
 ```
-~/Music/immersionpod/current/<video_stem>.ogg
+<output_dir>/<video_stem>.opus
+```
+
+Default:
+```
+~/Music/immersionpod/current/<video_stem>.opus
 ```
 
 ---

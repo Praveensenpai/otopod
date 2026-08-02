@@ -112,6 +112,7 @@ pub fn condense_audio(
             "-i", &video_path.to_string_lossy(),           // input video
             "-af", &filter,                                // audio filter
             "-vn",                                         // no video
+            "-map_metadata", "-1",                         // strip all metadata (removes chapters from mkv)
             "-c:a", "libopus",                             // opus codec (.opus) — modern, smaller, better quality
             "-b:a", "64k",                                 // 64kbps opus ≈ 128kbps vorbis quality
             &output_path.to_string_lossy(),                // output file

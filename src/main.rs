@@ -33,10 +33,27 @@ fn main() -> Result<()> {
             p
         }
         None => {
+            let stem = video_path.file_stem().unwrap().to_string_lossy();
+            let expected_sub = format!("{}.ja.srt", stem);
             ui::print_warning("No external subtitle found alongside video.");
-            ui::print_info("Run `subsink` first to download and sync a .ja.srt file.");
-            println!();
-            return Ok(());
+            ui::print_info(&format!(
+                "Run `subsink` first to download and sync {} file.",
+                expected_sub
+            ));
+
+            let options = vec![
+                "Exit to run subsink",
+                "Enter subtitle file path manually",
+            ];
+            let choice = Select::new("What would you like to do?", options).prompt()?;
+
+            if choice.starts_with("Exit") {
+                println!();
+                return Ok(());
+            } else {
+                let custom = Text::new("Enter subtitle file path:").prompt()?;
+                PathBuf::from(custom)
+            }
         }
     };
 

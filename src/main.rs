@@ -35,8 +35,8 @@ fn main() -> Result<()> {
         None => {
             ui::print_warning("No external subtitle found alongside video.");
             ui::print_info("Run `subsink` first to download and sync a .ja.srt file.");
-            let custom = Text::new("Enter subtitle file path manually:").prompt()?;
-            PathBuf::from(custom)
+            println!();
+            return Ok(());
         }
     };
 

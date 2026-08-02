@@ -65,6 +65,14 @@ Designed to pair directly with [**subsink**](https://github.com/Praveensenpai/su
 
 ## 🚀 Installation
 
+### Quick Install (Pre-compiled Linux Binary)
+
+```bash
+curl -fsSL -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/Praveensenpai/otopod/main/install.sh | bash
+```
+
+### Build from Source
+
 ```bash
 git clone https://github.com/Praveensenpai/otopod.git
 cd otopod

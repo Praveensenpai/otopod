@@ -1,0 +1,21 @@
+[package]
+name = "otopod"
+version = "0.1.0"
+edition = "2021"
+description = "音Pod — Blazing-fast single-pass anime audio condenser for Japanese passive immersion"
+authors = ["Praveensenpai"]
+repository = "https://github.com/Praveensenpai/otopod"
+license = "MIT"
+
+[[bin]]
+name = "otopod"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+console = "0.15"
+dirs = "5"
+indicatif = "0.17"
+inquire = "0.7"
+regex = "1"
+walkdir = "2"

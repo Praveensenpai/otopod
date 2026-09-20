@@ -45,7 +45,8 @@ pub fn parse_subtitle(sub_path: &Path) -> Result<Vec<SubtitleInterval>> {
     let mut intervals = Vec::new();
 
     // Check for SRT pattern: 00:01:23,456 --> 00:01:25,789
-    let re_srt = Regex::new(r"(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})")?;
+    let re_srt =
+        Regex::new(r"(\d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,\.]\d{3})")?;
     for cap in re_srt.captures_iter(&content) {
         let start = parse_srt_time(&cap[1]);
         let end = parse_srt_time(&cap[2]);
@@ -61,7 +62,9 @@ pub fn parse_subtitle(sub_path: &Path) -> Result<Vec<SubtitleInterval>> {
 
     if intervals.is_empty() {
         // Fallback/Try ASS pattern: Dialogue: 0,0:01:23.45,0:01:26.78,...
-        let re_ass = Regex::new(r"(?i)Dialogue:\s*\d+,\s*(\d{1,2}:\d{2}:\d{2}[\.\,]\d{2,3}),\s*(\d{1,2}:\d{2}:\d{2}[\.\,]\d{2,3})")?;
+        let re_ass = Regex::new(
+            r"(?i)Dialogue:\s*\d+,\s*(\d{1,2}:\d{2}:\d{2}[\.\,]\d{2,3}),\s*(\d{1,2}:\d{2}:\d{2}[\.\,]\d{2,3})",
+        )?;
         for cap in re_ass.captures_iter(&content) {
             let start = parse_ass_time(&cap[1]);
             let end = parse_ass_time(&cap[2]);
@@ -86,7 +89,11 @@ pub fn merge_intervals(intervals: &[SubtitleInterval], padding: f64) -> Vec<Subt
     }
 
     let mut sorted = intervals.to_vec();
-    sorted.sort_by(|a, b| a.start_secs.partial_cmp(&b.start_secs).unwrap());
+    sorted.sort_by(|a, b| {
+        a.start_secs
+            .partial_cmp(&b.start_secs)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut merged: Vec<SubtitleInterval> = Vec::new();
     let mut current = SubtitleInterval {
@@ -153,14 +160,19 @@ pub fn condense_audio(
 
     let output = Command::new("ffmpeg")
         .args([
-            "-y",                                          // overwrite existing
-            "-i", &video_path.to_string_lossy(),           // input video
-            "-af", &filter,                                // audio filter
-            "-vn",                                         // no video
-            "-map_metadata", "-1",                         // strip all metadata (removes chapters from mkv)
-            "-c:a", "libopus",                             // opus codec (.opus) — modern, smaller, better quality
-            "-b:a", "64k",                                 // 64kbps opus ≈ 128kbps vorbis quality
-            &output_path.to_string_lossy(),                // output file
+            "-y", // overwrite existing
+            "-i",
+            &video_path.to_string_lossy(), // input video
+            "-af",
+            &filter, // audio filter
+            "-vn",   // no video
+            "-map_metadata",
+            "-1", // strip all metadata (removes chapters from mkv)
+            "-c:a",
+            "libopus", // opus codec (.opus) — modern, smaller, better quality
+            "-b:a",
+            "64k",                          // 64kbps opus ≈ 128kbps vorbis quality
+            &output_path.to_string_lossy(), // output file
         ])
         .output()
         .context("Failed to spawn ffmpeg. Is ffmpeg installed and in PATH?")?;
@@ -220,9 +232,12 @@ pub fn extract_embedded_subtitle(video_path: &Path) -> Option<PathBuf> {
         let status = Command::new("ffmpeg")
             .args([
                 "-y",
-                "-i", &video_path.to_string_lossy(),
-                "-map", map,
-                "-c:s", "srt",
+                "-i",
+                &video_path.to_string_lossy(),
+                "-map",
+                map,
+                "-c:s",
+                "srt",
                 &tmp_sub.to_string_lossy(),
             ])
             .stdout(std::process::Stdio::null())
@@ -247,10 +262,14 @@ pub fn extract_embedded_subtitle(video_path: &Path) -> Option<PathBuf> {
 pub fn get_audio_duration(video_path: &Path) -> Option<f64> {
     let output = Command::new("ffprobe")
         .args([
-            "-v", "error",
-            "-select_streams", "a:0",
-            "-show_entries", "stream=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
+            "-v",
+            "error",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
             &video_path.to_string_lossy(),
         ])
         .output()

@@ -1,27 +1,44 @@
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
-use inquire::ui::{Attributes, Color, RenderConfig, Styled, StyleSheet};
+use inquire::ui::{Attributes, Color, RenderConfig, StyleSheet, Styled};
 use std::time::Duration;
 
 pub fn print_banner() {
     println!();
-    println!("{}", style("┌───────────────────────────────────────────────────────────────┐").magenta());
+    println!(
+        "{}",
+        style("┌───────────────────────────────────────────────────────────────┐").magenta()
+    );
     println!(
         "│  {}  │",
-        style("    🎧  O T O P O D  ──  Anime Immersion Audio Condenser     ").cyan().bold()
+        style("    🎧  O T O P O D  ──  Anime Immersion Audio Condenser     ")
+            .cyan()
+            .bold()
     );
-    println!("{}", style("└───────────────────────────────────────────────────────────────┘").magenta());
+    println!(
+        "{}",
+        style("└───────────────────────────────────────────────────────────────┘").magenta()
+    );
     println!();
 }
 
 pub fn custom_render_config() -> RenderConfig<'static> {
-    let mut config = RenderConfig::default();
-    config.prompt_prefix = Styled::new("✦ ").with_fg(Color::LightCyan).with_attr(Attributes::BOLD);
-    config.highlighted_option_prefix = Styled::new("❯ ").with_fg(Color::LightMagenta).with_attr(Attributes::BOLD);
-    config.scroll_up_prefix = Styled::new("▲").with_fg(Color::DarkGrey);
-    config.scroll_down_prefix = Styled::new("▼").with_fg(Color::DarkGrey);
-    config.selected_option = Some(StyleSheet::new().with_fg(Color::LightMagenta).with_attr(Attributes::BOLD));
-    config
+    RenderConfig {
+        prompt_prefix: Styled::new("✦ ")
+            .with_fg(Color::LightCyan)
+            .with_attr(Attributes::BOLD),
+        highlighted_option_prefix: Styled::new("❯ ")
+            .with_fg(Color::LightMagenta)
+            .with_attr(Attributes::BOLD),
+        scroll_up_prefix: Styled::new("▲").with_fg(Color::DarkGrey),
+        scroll_down_prefix: Styled::new("▼").with_fg(Color::DarkGrey),
+        selected_option: Some(
+            StyleSheet::new()
+                .with_fg(Color::LightMagenta)
+                .with_attr(Attributes::BOLD),
+        ),
+        ..RenderConfig::default()
+    }
 }
 
 pub fn create_spinner(msg: &'static str) -> ProgressBar {
@@ -54,7 +71,9 @@ pub fn print_step(step: usize, total: usize, title: &str) {
     println!();
     println!(
         "{} {}",
-        style(format!("── Step [{}/{}] ──", step, total)).magenta().bold(),
+        style(format!("── Step [{}/{}] ──", step, total))
+            .magenta()
+            .bold(),
         style(title).cyan().bold()
     );
 }

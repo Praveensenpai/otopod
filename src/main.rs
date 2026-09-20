@@ -1,35 +1,56 @@
 mod condenser;
 mod config;
+mod scanner;
 mod ui;
 
 use anyhow::Result;
 use inquire::{Select, Text};
 use std::path::PathBuf;
-use walkdir::WalkDir;
 
 fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match args.as_slice() {
+        [flag] if matches!(flag.as_str(), "-h" | "--help") => {
+            println!(
+                "otopod {}\n\nUsage: otopod [OPTION | VIDEO_FILE]\n\nOptions:\n  -h, --help       Show this help message\n  -v, -V, --version  Show version",
+                env!("CARGO_PKG_VERSION")
+            );
+            return Ok(());
+        }
+        [flag] if matches!(flag.as_str(), "-v" | "-V" | "--version") => {
+            println!("otopod {}", env!("CARGO_PKG_VERSION"));
+            return Ok(());
+        }
+        _ => {}
+    }
+
     inquire::set_global_render_config(ui::custom_render_config());
     ui::print_banner();
 
     let cfg = config::Config::load()?;
-    ui::print_info(&format!("Output dir: {}", cfg.resolved_output_dir().display()));
+    ui::print_info(&format!(
+        "Output dir: {}",
+        cfg.resolved_output_dir().display()
+    ));
 
     // STEP 1: Select video file
     ui::print_step(1, 3, "Select Raw Anime Video File");
-    let video_path = select_video_file()?;
-    ui::print_success(&format!(
-        "Selected: {}",
-        video_path.file_name().unwrap().to_string_lossy()
-    ));
+    let video_path = scanner::select_video_file()?;
+    let selected_name = video_path
+        .file_name()
+        .map(|f| f.to_string_lossy())
+        .unwrap_or_else(|| "video".into());
+    ui::print_success(&format!("Selected: {}", selected_name));
 
     // STEP 2: Find subtitle file
     ui::print_step(2, 3, "Locate Synced Subtitle File");
     let sub_path = match condenser::find_subtitle(&video_path) {
         Some(p) => {
-            ui::print_success(&format!(
-                "Found external subtitle: {}",
-                p.file_name().unwrap().to_string_lossy()
-            ));
+            let sub_name = p
+                .file_name()
+                .map(|f| f.to_string_lossy())
+                .unwrap_or_else(|| "subtitle".into());
+            ui::print_success(&format!("Found external subtitle: {}", sub_name));
             p
         }
         None => {
@@ -46,7 +67,10 @@ fn main() -> Result<()> {
                     p
                 }
                 None => {
-                    let stem = video_path.file_stem().unwrap().to_string_lossy();
+                    let stem = video_path
+                        .file_stem()
+                        .map(|s| s.to_string_lossy())
+                        .unwrap_or_else(|| "video".into());
                     let expected_sub = format!("{}.ja.srt", stem);
                     ui::print_warning("No external or embedded subtitle found alongside video.");
                     ui::print_info(&format!(
@@ -54,10 +78,7 @@ fn main() -> Result<()> {
                         expected_sub
                     ));
 
-                    let options = vec![
-                        "Exit to run subsink",
-                        "Enter subtitle file path manually",
-                    ];
+                    let options = vec!["Exit to run subsink", "Enter subtitle file path manually"];
                     let choice = Select::new("What would you like to do?", options).prompt()?;
 
                     if choice.starts_with("Exit") {
@@ -90,14 +111,21 @@ fn main() -> Result<()> {
     ui::print_info(&format!("Merged into {} audio segments", merged.len()));
 
     // Determine output path from config
-    let stem = video_path.file_stem().unwrap().to_string_lossy();
+    let stem = video_path
+        .file_stem()
+        .map(|s| s.to_string_lossy())
+        .unwrap_or_else(|| "audio".into());
     let output_dir = cfg.resolved_output_dir();
     let output_path = output_dir.join(format!("{}.opus", stem));
 
+    let out_file_display = output_path
+        .file_name()
+        .map(|f| f.to_string_lossy())
+        .unwrap_or_else(|| "audio.opus".into());
     let condense_msg = format!(
         "Condensing {} segments → {} ...",
         merged.len(),
-        output_path.file_name().unwrap().to_string_lossy()
+        out_file_display
     );
     let condense_spinner = ui::create_spinner_owned(condense_msg);
 
@@ -126,70 +154,4 @@ fn main() -> Result<()> {
     println!();
 
     Ok(())
-}
-
-fn select_video_file() -> Result<PathBuf> {
-    let videos_dir = dirs::video_dir().unwrap_or_else(|| PathBuf::from("./"));
-
-    let mut files: Vec<PathBuf> = Vec::new();
-
-    // Check if a CLI argument was passed (e.g. otopod anime.mkv)
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    if !args.is_empty() {
-        let p = PathBuf::from(&args[0]);
-        if p.exists() {
-            return Ok(p);
-        }
-        // Try relative to cwd
-        let cwd_p = std::env::current_dir()?.join(&args[0]);
-        if cwd_p.exists() {
-            return Ok(cwd_p);
-        }
-        anyhow::bail!("File not found: {}", args[0]);
-    }
-
-    for entry in WalkDir::new(&videos_dir).max_depth(3).into_iter().flatten() {
-        if entry.file_type().is_file() {
-            if let Some(ext) = entry.path().extension().and_then(|s| s.to_str()) {
-                if matches!(ext.to_lowercase().as_str(), "mkv" | "mp4" | "avi" | "webm") {
-                    files.push(entry.path().to_path_buf());
-                }
-            }
-        }
-    }
-
-    // Fallback to current dir
-    if files.is_empty() {
-        for entry in WalkDir::new("./").max_depth(2).into_iter().flatten() {
-            if entry.file_type().is_file() {
-                if let Some(ext) = entry.path().extension().and_then(|s| s.to_str()) {
-                    if matches!(ext.to_lowercase().as_str(), "mkv" | "mp4" | "avi" | "webm") {
-                        files.push(entry.path().to_path_buf());
-                    }
-                }
-            }
-        }
-    }
-
-    if files.is_empty() {
-        let custom = Text::new("No video files found. Enter video file path:").prompt()?;
-        return Ok(PathBuf::from(custom));
-    }
-
-    let display: Vec<String> = files
-        .iter()
-        .map(|p| {
-            let name = p.file_name().unwrap().to_string_lossy();
-            let parent = p
-                .parent()
-                .and_then(|par| par.file_name())
-                .map(|f| f.to_string_lossy())
-                .unwrap_or_default();
-            format!("{}/{}", parent, name)
-        })
-        .collect();
-
-    let choice = Select::new("Select video file:", display.clone()).prompt()?;
-    let idx = display.iter().position(|d| d == &choice).unwrap_or(0);
-    Ok(files[idx].clone())
 }

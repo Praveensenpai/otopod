@@ -1,6 +1,6 @@
 [package]
 name = "otopod"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 description = "音Pod — Blazing-fast single-pass anime audio condenser for Japanese passive immersion"
 authors = ["Praveensenpai"]
@@ -21,3 +21,6 @@ regex = "1"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3"

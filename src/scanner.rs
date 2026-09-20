@@ -123,8 +123,35 @@ pub fn discover_video_files(
         }
     }
 
-    files.sort_by(|left, right| natural_path_cmp(left, right));
+    sort_video_files(&mut files, cwd, is_home);
     files
+}
+
+pub fn sort_video_files(files: &mut [PathBuf], cwd: &Path, cwd_is_home: bool) {
+    let canonical_cwd = cwd.canonicalize().ok();
+
+    let mut annotated: Vec<(bool, PathBuf)> = files
+        .iter()
+        .map(|p| {
+            let in_cwd = !cwd_is_home
+                && canonical_cwd
+                    .as_ref()
+                    .is_some_and(|c| p.canonicalize().is_ok_and(|can| can.starts_with(c)));
+            (in_cwd, p.clone())
+        })
+        .collect();
+
+    annotated.sort_by(|(left_in_cwd, left_path), (right_in_cwd, right_path)| {
+        match (left_in_cwd, right_in_cwd) {
+            (true, false) => Ordering::Less,
+            (false, true) => Ordering::Greater,
+            _ => natural_path_cmp(left_path, right_path),
+        }
+    });
+
+    for (i, (_, path)) in annotated.into_iter().enumerate() {
+        files[i] = path;
+    }
 }
 
 pub fn select_video_file() -> Result<PathBuf> {
@@ -302,5 +329,25 @@ mod tests {
         let files_inside = discover_video_files(&videos, &deep_videos, None);
         assert_eq!(files_inside.len(), 1);
         assert_eq!(files_inside[0], ep1);
+    }
+
+    #[test]
+    fn test_sort_video_files_prioritizes_cwd() {
+        let root = tempdir().unwrap();
+        let current_anime = root.path().join("Anime").join("TargetShow");
+        let other_anime = root.path().join("Anime").join("OtherShow");
+        create_dir_all(&current_anime).unwrap();
+        create_dir_all(&other_anime).unwrap();
+
+        let other_ep1 = other_anime.join("ep01.mkv");
+        let target_ep1 = current_anime.join("ep01.mkv");
+        File::create(&other_ep1).unwrap();
+        File::create(&target_ep1).unwrap();
+
+        let mut files = vec![other_ep1.clone(), target_ep1.clone()];
+        sort_video_files(&mut files, &current_anime, false);
+
+        assert_eq!(files[0], target_ep1);
+        assert_eq!(files[1], other_ep1);
     }
 }

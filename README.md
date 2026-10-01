@@ -21,6 +21,12 @@ Designed to pair directly with [**subsink**](https://github.com/Praveensenpai/su
 
 ---
 
+<p align="center">
+  <img src="assets/demo.gif" alt="otopod terminal usage showcase" width="800" />
+</p>
+
+---
+
 ## ✨ Features
 
 - ⚡ **Single-Pass Audio Condensing**: Parses subtitle timestamps and runs one `ffmpeg` `aselect` filter directly to the output `.opus` file — no 150+ temp chunks in `/tmp`.

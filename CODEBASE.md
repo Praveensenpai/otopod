@@ -129,6 +129,9 @@ cargo fmt --check
 ```
 
 ## 6. Recent Iteration Changes
+- **2026-10-01**:
+  - Added `assets/demo.gif` showcasing `otopod` terminal usage on Yuru Camp Season 2 (`Yuru Camp - S02E01.mkv`).
+  - Updated `README.md` to embed the showcase demonstration under the hero section.
 - **2026-09-20 (v0.1.7)**:
   - Added contextual proximity sorting (`sort_video_files`): video files under current working directory (`cwd`) are placed first, followed by natural episode naming order.
 - **2026-09-20 (v0.1.6)**:
